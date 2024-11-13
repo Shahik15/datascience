@@ -1,0 +1,102 @@
+!pip install openai langchain flask transformers
+!pip install langchain-community langchain-core
+!pip install -U duckduckgo-search
+
+!pip install openai==0.28
+
+
+import openai
+from langchain.prompts import PromptTemplate
+from langchain.llms import OpenAI
+from langchain.chains import LLMChain
+from langchain.agents import initialize_agent, Tool, AgentType
+
+# Set up OpenAI API Key (you can get your key from https://platform.openai.com/account/api-keys)
+#Never share api key
+import os
+os.environ['OPENAI_API_KEY'] = 'key here'
+
+
+# Initialize GPT-3.5 Turbo model through LangChain's OpenAI LLM interface
+llm = OpenAI(model="gpt-3.5-turbo", temperature=0.7)
+
+
+
+def create_test(question, answers):
+    prompt = f"Create a multiple-choice test based on the following question: {question}\nOptions:\n{answers}"
+    
+    # Use the new API method: `openai.chat_completions.create()`
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # You can use "gpt-4" if needed
+        messages=[
+            {"role": "system", "content": "You are an assistant that creates educational tests."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=150
+    )
+    
+    # Return the response from the model
+    return response['choices'][0]['message']['content'].strip()
+
+# Function to generate an academic plan using the correct method
+def create_academic_plan(subject):
+    prompt = f"Generate a detailed academic plan for learning the subject: {subject}."
+    
+    # Use the new API method: `openai.chat_completions.create()`
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # Or use "gpt-4" if needed
+        messages=[
+            {"role": "system", "content": "You are an assistant that creates academic learning plans."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=300
+    )
+    
+    # Return the response from the model
+    return response['choices'][0]['message']['content'].strip()
+
+
+from langchain.agents import initialize_agent, AgentType
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from langchain.tools import DuckDuckGoSearchResults
+
+# Initialize search tool (optional, can be used for real-time data fetching)
+search = DuckDuckGoSearchResults()
+
+# Define some tools (queries to use with the IEA system)
+tools = [
+    Tool(
+        name="Academic Plan Generator",
+        func=create_academic_plan,
+        description="Generates a detailed academic plan for a subject"
+    ),
+    Tool(
+        name="Multiple Choice Test Generator",
+        func=create_test,
+        description="Generates a multiple-choice test based on the given question and answers"
+    ),
+]
+
+# Define the agent and chain for processing the inputs
+agent = initialize_agent(
+    tools, 
+    llm, 
+    agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION, 
+    verbose=True
+)
+
+# Example interaction with the IEA system
+question = "What are the key principles of quantum mechanics?"
+answers = "A. Wave-particle duality\nB. Conservation of energy\nC. Law of motion\nD. None of the above"
+
+# Generate multiple-choice test
+print("Multiple Choice Test:")
+test_output = create_test(question, answers)
+print(test_output)
+
+# Generate academic plan for a subject
+subject = "Computer Science"
+print("\nAcademic Plan:")
+plan_output = create_academic_plan(subject)
+print(plan_output)
